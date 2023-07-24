@@ -10,11 +10,29 @@ This is a small project with aim of making GUI-like interface for scdl Soundclou
 
 * [python3](https://www.python.org/downloads/)
 * [scdl](https://github.com/flyingrub/scdl)
+* ffmpeg
 
 <h3>Instalation</h3>
 
-Install all dependencies listed above then download/clone this repo.\
-Remember to update scdl `pip3 install scdl --upgrade`.
+<h4>Windows</h4>
+
+`pip3 install scdl`
+
+Then download ffmpeg and extract it at `C:\Program Files\ffmpeg\`
+Remember to add enviorment variables in advanced Windows settings.
+
+![](linked_var.png)
+
+<h4>macos / Linux</h4>
+
+`pip3 install scdl` 
+
+Installs ffmpeg automaticly.
+
+<h3>Use</h3>
+Just navigate to this repo folder end run 
+
+'python3 ncurses-gui-scdl.py`
 
 <h3>Credits</h3>
 
