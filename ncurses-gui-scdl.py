@@ -1,53 +1,130 @@
+import curses as c
 import subprocess
-#development version
+def run_command(stdscr, command):
+    stdscr.clear()
+    stdscr.addstr(0, 0, f"Executing command: {command}")
+    stdscr.refresh()
 
-def clear_screen():
-    for _ in range(30):
-        print("\n")
+    # Uruchomienie procesu z przekierowaniem wyjścia do zmiennej pipe
+    pipe = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-def get_choice():
+    # Odczytywanie wyjścia procesu i wypisywanie go na ekranie ncurses
+    row = 2
     while True:
-        try:
-            choice = int(input("Choose an option: "))
-            return choice
-        except ValueError:
-            clear_screen()
-            print("Unknown command!\n")
+        output = pipe.stdout.readline()
+        if not output:
+            break
+        stdscr.addstr(row, 0, output.strip())
+        stdscr.refresh()
+        row += 1
 
-def show_menu():
-    print('Soundcloud downloader 0.1v\n')
-    print('Current file path:', file_path)
-    print('[1] Specify file path')
-    print('[2] Download track/playlist from public URL')
-    print('[3] Exit')
+    # Oczekiwanie na zakończenie procesu
+    pipe.wait()
 
-file_path = "None!"
+    stdscr.addstr(row, 0, "Press any key to exit.")
+    stdscr.refresh()
+    stdscr.getch()
+
+
+#============
 track_url = ""
 
-def download_track(track_url, file_path):
-    try:
-        subprocess.check_call(["scdl", "-l", track_url, "--path", file_path])
-    except subprocess.CalledProcessError as e:
-        print("Error occurred:", str(e))
+def main(stdscr):
+    c.curs_set(0)
+    c.init_pair(1, c.COLOR_BLACK, c.COLOR_WHITE)  # Define color pair for highlighted text
+    c.init_pair(2, c.COLOR_WHITE, c.COLOR_BLACK)  # Define color pair for normal text
 
-while True:
-    download = False
-    if not download:
-        clear_screen()
-    show_menu()
-    choice = get_choice()
+    head = "scdl gui 0.2v"
+    str1 = "Specify file path to save downloads: "
+    str2 = "Download track/playlist from public URL: "
+    str3 = "Quit"
+    footer = "Current Path: "
+    file_path = "None!"
+    
 
-    if choice == 1:
-        clear_screen()
-        file_path = input('Enter the file path to the music folder: ')
-        clear_screen()
-    elif choice == 2:
-        clear_screen()
-        track_url = input('Paste the URL: ')
-        download_track(track_url, file_path)
-        print("\n")
-    elif choice == 3:
-        break
-    else:
-        clear_screen()
-        print('Unknown command!\n')
+    iterator = 0
+
+    while True:
+        stdscr.clear()
+        stdscr.refresh()
+
+        if(len(file_path)==0):
+            file_path = "None!"
+
+        # Handling window dimensions
+        length, width = stdscr.getmaxyx()
+
+        # Create a new window for the menu
+        menu = stdscr.subwin(length - 2, width - 4, 1, 2)
+        menu.box()
+
+        # Add header and footer to the menu
+        menu.addstr(0, (width - len(head)) // 2, head, c.A_REVERSE)
+        menu.addstr(length - 4, 4, footer + str(file_path))
+
+        # Highlight the selected option
+        if iterator == 0:
+            menu.addstr(4, 4, str1, c.color_pair(1))
+            menu.addstr(5, 4, str2, c.color_pair(2))
+            menu.addstr(6, 4, str3, c.color_pair(2))
+        elif iterator == 1:
+            menu.addstr(4, 4, str1, c.color_pair(2))
+            menu.addstr(5, 4, str2, c.color_pair(1))
+            menu.addstr(6, 4, str3, c.color_pair(2))
+        elif iterator == 2:
+            menu.addstr(4, 4, str1, c.color_pair(2))
+            menu.addstr(5, 4, str2, c.color_pair(2))
+            menu.addstr(6, 4, str3, c.color_pair(1))
+
+        # Refresh the menu window
+        menu.refresh()
+
+        # Get user input
+        input_key = stdscr.getch()
+
+        # Process user input
+        if input_key == c.KEY_UP:
+            iterator = max(0, iterator - 1)
+        elif input_key == c.KEY_DOWN:
+            iterator = min(2, iterator + 1)
+        elif input_key == ord('\n'):
+            if iterator == 2:
+                c.endwin()
+                break
+            elif iterator == 0:
+                stdscr.clear()
+                c.curs_set(1)
+                c.echo()
+                menu = stdscr.subwin(length - 2, width - 4, 1, 2)
+                menu.box()
+
+                # Add header and footer to the menu
+                menu.addstr(0, (width - len(head)) // 2, head, c.A_REVERSE)
+                menu.addstr(4, 4, str1, c.color_pair(2))                
+                file_path = stdscr.getstr(6,6,100)
+                file_path = file_path.decode('utf8')
+                c.curs_set(0)
+            elif iterator == 1:
+                stdscr.clear()
+                c.curs_set(1)
+                c.echo()
+                menu = stdscr.subwin(length - 2, width - 4, 1, 2)
+                menu.box()
+
+                # Add header and footer to the menu
+                menu.addstr(0, (width - len(head)) // 2, head, c.A_REVERSE)
+                menu.addstr(5, 4, str2, c.color_pair(2))                
+                track_url = stdscr.getstr(5,6,100)
+                track_url = track_url.decode('utf8')
+                download_track = "scdl -l " +track_url+" --path "+file_path
+                run_command(stdscr,download_track)
+                c.curs_set(0)
+
+
+        elif input_key == ord('q'):
+            # Clean up before exiting
+            c.endwin()
+            break
+
+if __name__ == "__main__":
+    c.wrapper(main)
